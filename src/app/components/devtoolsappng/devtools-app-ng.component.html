@@ -1,0 +1,207 @@
+<div class="devtools-app-ng">
+
+  <p-toolbar styleClass="drag">
+    <div class="p-toolbar-group-left">
+      <div><b>Any Devtools App ({{ version }})</b></div>
+      <div class="p-ml-4 no-drag">
+        <p-selectButton [options]="tabs" [(ngModel)]="activeTab" optionLabel="label" styleClass="no-drag"></p-selectButton>
+      </div>
+    </div>
+    <div class="p-toolbar-group-right">
+      <button type="button" pButton
+        icon="pi {{ isMaximized() ? 'pi-window-minimize' : 'pi pi-window-maximize' }}"
+        class="p-ml-5 no-drag"
+        (click)="toggle()">
+      </button>
+      <button type="button" pButton
+        icon="pi pi-times"
+        class="p-button-danger p-ml-2 no-drag"
+        (click)="quit()">
+      </button>
+    </div>
+  </p-toolbar>
+
+  <div class="p-grid">
+    <div class="p-col-12 p-col-align-center tabs no-drag">
+      <ng-container [ngSwitch]="activeTab.id">
+        <ng-container *ngSwitchCase="tabs[0].id">
+          <p-toolbar styleClass="drag">
+            <div class="p-toolbar-group-left">
+              <div class="p-inputgroup">
+                <span class="p-inputgroup-addon">http://</span>
+                <input type="text" size="7" class="no-drag" pInputText placeholder="host" [(ngModel)]="chromeHost">
+                <span class="p-inputgroup-addon">:</span>
+                <input type="text" size="4" class="no-drag" pInputText placeholder="port" [(ngModel)]="chromePort">
+              </div>
+              <button
+                type="button"
+                pButton
+                icon="pi pi-sitemap"
+                class="p-ml-2 p-button-success no-drag"
+                [disabled]="devtoolsConnected"
+                pTooltip="Get debug targets from remote Chromer debugger"
+                (click)="connect()">
+              </button>
+            </div>
+            <div class="p-toolbar-group-right">
+              <span class="p-ml-auto">Select page:</span>
+              <p-dropdown
+                [readonly]="devtoolsConnected"
+                [options]="inpsectablePages"
+                [(ngModel)]="inpsectablePage"
+                [style]="{'width': '41vw'}"
+                styleClass="p-ml-2 no-drag"
+                optionLabel="url">
+              </p-dropdown>
+              <button
+                type="button"
+                pButton
+                icon="pi pi-caret-right"
+                [icon]="devtoolsConnected ? 'pi pi-power-off' : 'pi pi-caret-right'"
+                class="p-ml-2 p-button-success no-drag"
+                [disabled]="inpsectablePages.length === 0"
+                pTooltip="{{devtoolsConnected ? 'Stop devtools' : 'Launch devtools'}}"
+                (click)="devtoolsConnected ? disconnect() : launchDevtools($event)">
+              </button>
+              <button
+                type="button"
+                pButton
+                icon="pi pi-clone"
+                class="p-ml-2 p-button-secondary no-drag"
+                [disabled]="!devtoolsConnected"
+                pTooltip="Launch devtools on devtools"
+                (click)="launchDevtoolsOnDevtools()">
+              </button>
+            </div>
+          </p-toolbar>
+
+          <ng-container *ngIf="!devtoolsConnected">
+            <p-toolbar styleClass="drag">
+              <div class="p-toolbar-group-left">
+                <div class="p-inputgroup">
+                  <span class="p-inputgroup-addon">URL:</span>
+                  <input type="text"
+                    pInputText
+                    style="width: 30vw;"
+                    class="no-drag"
+                    placeholder="URL for debugging"
+                    (keyup.enter)="launchChrome()"
+                    [(ngModel)]="startingUrl">
+                  <button type="button"
+                    pButton
+                    icon="pi pi-external-link"
+                    class="p-button-success no-drag"
+                    pTooltip="Launch Chrome on url: '{{ startingUrl }}'"
+                    [disabled]="chromeLaunched"
+                    (click)="launchChrome()">
+                  </button>
+                  <button type="button"
+                    pButton
+                    icon="pi pi-times"
+                    class="p-button-danger no-drag"
+                    pTooltip="Kill launched Chrome."
+                    [disabled]="!chromeLaunched"
+                    (click)="killLaunchedChrome()">
+                  </button>
+                </div>
+              </div>
+              <div class="p-toolbar-group-right">
+                <span class="p-ml-auto">Hosted devtools:</span>
+                <p-dropdown
+                  [(ngModel)]="devtoolsURL"
+                  [options]="devtoolsURLs"
+                  optionLabel="label"
+                  editable="true"
+                  [style]="{'width': '30vw'}"
+                  styleClass="p-ml-2 no-drag"
+                  [pTooltip]="devttoolsTooltip()"
+                  placeholder="Devtools url">
+                </p-dropdown>
+                <span class="p-ml-2">{{devtoolsURLArgs}}...</span>
+                <button
+                  type="button"
+                  pButton
+                  icon="pi pi-copy"
+                  class="p-ml-2 p-button-info no-drag"
+                  pTooltip="Copy devtools URL"
+                  (click)="copyDevtoolsURL()">
+                </button>
+                <button
+                  type="button"
+                  pButton
+                  icon="pi pi-replay no-drag"
+                  class="p-ml-2 p-button-info"
+                  pTooltip="Select Builtin devtools."
+                  (click)="undo()">
+                </button>
+              </div>
+            </p-toolbar>
+          </ng-container>
+
+          <div>
+            <webview id="devtools-view"
+              [ngStyle]="{'height' : (devtoolsConnected ? 'calc(100vh - 122px)' : 'calc(100vh - 170px)')}"
+              style="border: 1px solid #CCC;width: 100%;"
+              src="about:blank"
+              disablewebsecurity></webview>
+          </div>
+        </ng-container>
+
+
+
+        <ng-container *ngSwitchCase="tabs[1].id">
+          <webview id="info-view"
+            style="border: 1px solid #CCC;width: 100%; height: calc(100vh - 72px);"
+            src="https://docs.google.com/document/d/1WNF-KqRSzPLUUfZqQG5AFeU_Ll8TfWYcJasa_XGf7ro/edit#heading=h.8pmor7vpbvt2"></webview>
+        </ng-container>
+
+
+
+        <!-- <ng-container *ngSwitchCase="tabs[2].id">
+          <webview id="blog-view"
+            style="border: 1px solid #CCC;width: 100%; height: calc(100vh - 72px);"
+            src="http://sandipchitale.blogspot.com/2019/02/devtools-app-angular.html"></webview>
+        </ng-container> -->
+
+
+
+        <ng-container *ngSwitchCase="tabs[2].id">
+          <webview id="github-view"
+          style="border: 1px solid #CCC;width: 100%; height: calc(100vh - 72px);"
+          src="https://github.com/sandipchitale/AnyDevToolsApp"></webview>
+        </ng-container>
+
+
+
+        <ng-container *ngSwitchCase="tabs[3].id">
+          <div class="p-grid p-nogutter">
+            <div class="p-col-12 p-col-align-center">
+              <div class="p-inputgroup">
+                <span class="p-inputgroup-addon">Search API:</span>
+                <input type="text"
+                  pInputText
+                  style="width: calc(100% - 130px);"
+                  placeholder="Search for Web and JavaScript API e.g. Window, HTMLElement, RegExp, setTimeout"
+                  (keyup.enter)="showApi()"
+                  [(ngModel)]="api">
+                <button type="button"
+                  pButton
+                  icon="pi pi-search"
+                  styleClass="p-button-success"
+                  [disabled]="api.trim().length === 0"
+                  (click)="showApi()">
+                </button>
+              </div>
+            </div>
+            <div class="p-col-12 p-col-align-center">
+              <br/>
+              <webview id="api-view"
+              style="border: 1px solid #CCC;width: 100%; height: calc(100vh - 128px);"
+              src="https://developer.mozilla.org/en-US/docs/Web/API"></webview>
+            </div>
+          </div>
+        </ng-container>
+      </ng-container>
+    </div>
+  </div>
+</div>
